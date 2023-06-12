@@ -153,7 +153,7 @@ func checkLetter(path Path) error {
 	return nil
 }
 
-//O(n)
+//O(3*n)
 //for future refactor
 //todo validation in a separate module
 //todo instead of contains method we can use map[string]struct{} like a set
