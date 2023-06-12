@@ -25,6 +25,7 @@ type Path struct {
 }
 
 func main() {
+
 	var listOfPaths = []Path{
 		{
 			From: "msc",
@@ -39,36 +40,27 @@ func main() {
 			To:   "msc",
 		},
 	}
-	res, err := createMarhsrut(len(listOfPaths), listOfPaths)
+	res, err := createRoute(len(listOfPaths), listOfPaths)
+
 	if err != nil {
 		fmt.Println(err)
 	} else {
 		fmt.Println(res)
 	}
-
 }
 
-func createMarhsrut(lenOfList int, massive []Path) (string, error) {
+func createRoute(lenOfList int, massive []Path) (string, error) {
+	//checkLenght
+	if lenOfList == 0 {
+		return "", errors.New("Invalid data, less than 1 char")
+	}
+
 	result := make([]string, lenOfList)
 
-	//create map and listOfTos type of slice for memory efficiency
+	mapOfPaths, listOfTos, err := processDataForValidation(massive)
 
-	mapOfPaths := make(map[string]string)
-	listOfTos := make([]string, lenOfList+1)
-
-	//also check on regular expression
-	var isValid bool
-	var err error
-
-	for _, k := range massive {
-		isValid, err = checkValidity(k)
-		if isValid {
-			mapOfPaths[k.From] = k.To
-			listOfTos = append(listOfTos, k.To)
-		} else {
-			return "", err
-		}
-
+	if err != nil {
+		return "", err
 	}
 
 	//get the head of linked list
@@ -108,51 +100,62 @@ func contains(s []string, str string) bool {
 
 //validation
 
-func checkValidity(path Path) (bool, error) {
-	isValidByLen, err1 := checkMoreThanOne(path)
-	isValidBySymbol, err2 := checkLetter(path)
-	isValidWithoutDublicate, err3 := checkSameTown(path)
+func processDataForValidation(massive []Path) (map[string]string, []string, error) {
 
-	isValid := isValidByLen && isValidBySymbol && isValidWithoutDublicate
+	mapOfPaths := make(map[string]string)
+	var listOfTos []string
+	var err error
+
+	for _, k := range massive {
+		err = checkValidity(k)
+		if err == nil {
+			if _, ok := mapOfPaths[k.From]; !ok {
+				mapOfPaths[k.From] = k.To
+			} else {
+				return mapOfPaths, listOfTos, errors.New("Invalid data, same town in list of paths From: " + fmt.Sprintf("%v", k.From))
+			}
+			isLoop := contains(listOfTos, k.To)
+			if !isLoop {
+				listOfTos = append(listOfTos, k.To)
+			} else {
+				return mapOfPaths, listOfTos, errors.New("Invalid data, same town in list of paths To: " + fmt.Sprintf("%v", k.To))
+			}
+
+		}
+	}
+	return mapOfPaths, listOfTos, err
+}
+
+func checkValidity(path Path) error {
+	err1 := checkLetter(path)
+	err2 := checkSameTown(path)
 
 	if err1 != nil {
-		return isValid, err1
-	} else if err2 != nil {
-		return isValid, err2
+		return err1
 	} else {
-		return isValid, err3
+		return err2
 	}
 }
 
-// todo
-func checkLooping(path Path) (bool, error) {
-	return true, nil
-}
-
-// todo
-func checkBreak(path Path) (bool, error) {
-	return true, nil
-}
-
-func checkSameTown(path Path) (bool, error) {
+func checkSameTown(path Path) error {
 	if path.From == path.To {
-		return false, errors.New("Invalid data, same town in the path: " + fmt.Sprintf("%v", &path))
+		return errors.New("Invalid data, same town in the path: " + fmt.Sprintf("%v", &path))
 	}
-	return true, nil
+	return nil
 }
 
-func checkMoreThanOne(path Path) (bool, error) {
-	if len(path.From) < 1 || len(path.To) < 1 {
-		return false, errors.New("Invalid data, less than 1 char: " + fmt.Sprintf("%v", &path))
-	}
-	return true, nil
-}
-
-func checkLetter(path Path) (bool, error) {
+func checkLetter(path Path) error {
 	var IsLetter = regexp.MustCompile(`^[a-zA-Z0-9.,]+$`).MatchString
 
 	if !IsLetter(path.From) || !IsLetter(path.To) {
-		return false, errors.New("There is a wrong simbol: " + fmt.Sprintf("%v", &path))
+		return errors.New("There is a wrong simbol: " + fmt.Sprintf("%v", &path))
 	}
-	return true, nil
+	return nil
 }
+
+//O(n)
+//for future refactor
+//todo validation in a separate module
+//todo instead of contains method we can use map[string]struct{} like a set
+//todo separate creation of map and serialization to string by logic blocks
+//todo check with business where data comes from - library/custom controller/api
